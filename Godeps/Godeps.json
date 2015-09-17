@@ -1,0 +1,8 @@
+{
+	"ImportPath": "github.com/slowteetoe/todo",
+	"GoVersion": "go1.5",
+	"Packages": [
+		"./..."
+	],
+	"Deps": []
+}
