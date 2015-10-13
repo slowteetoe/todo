@@ -5,6 +5,7 @@ import (
 	"github.com/slowteetoe/todo/Godeps/_workspace/src/github.com/gorilla/context"
 	"github.com/slowteetoe/todo/Godeps/_workspace/src/gopkg.in/mgo.v2"
 	"github.com/slowteetoe/todo/Godeps/_workspace/src/gopkg.in/mgo.v2/bson"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -36,7 +37,21 @@ func create(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func respond(w http.ResponseWriter, r *http.Request) {
+type twilioRequest struct {
+	Body string //`xml:"status>product1>free"`
+	From string
+}
+
+func incoming(w http.ResponseWriter, r *http.Request) {
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var twil twilioRequest
+	log.Printf("Twilio post was: %v", data)
+	xml.Unmarshal([]byte(data), &twil)
+
 	message := SmsResponse{XMLName: xml.Name{Local: "Response"}, Message: "Thank you, I got it."}
 	x, err := xml.MarshalIndent(message, "", "  ")
 	if err != nil {
@@ -113,7 +128,7 @@ func main() {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
-	http.HandleFunc("/incoming", respond)
+	http.HandleFunc("/incoming", incoming)
 	http.HandleFunc("/list", server.WithData(todoList))
 	http.HandleFunc("/create", server.WithData(create))
 
