@@ -23,6 +23,7 @@ type TodoItem struct {
 }
 
 type TodoList struct {
+	Id                     bson.ObjectId `bson:"_id,omitempty"`
 	Name                   string
 	TodoItems              []TodoItem
 	AssociatedPhoneNumbers []string
@@ -42,6 +43,7 @@ func create(w http.ResponseWriter, r *http.Request) {
 func createBlankTodoList(phoneNumber, todoListName string, c *mgo.Collection) (*TodoList, error) {
 	var todoList TodoList
 	todoList = TodoList{
+		Id:                     bson.NewObjectId(),
 		Name:                   todoListName,
 		TodoItems:              []TodoItem{},
 		AssociatedPhoneNumbers: []string{phoneNumber},
@@ -87,6 +89,7 @@ func incoming(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Working with %v", todo)
 	todo.TodoItems = append(todo.TodoItems, TodoItem{Title: body})
 	log.Printf("TODO: need to save %v", todo)
+	// c.UpdateId(todo.Id, bson.M{"$set": bson.M{"name": "updated name"}})
 
 	message := SmsResponse{XMLName: xml.Name{Local: "Response"}, Message: "Thank you, I got it."}
 	x, err := xml.MarshalIndent(message, "", "  ")
