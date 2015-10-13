@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/xml"
-	"github.com/gorilla/context"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"github.com/slowteetoe/todo/Godeps/_workspace/src/github.com/gorilla/context"
+	"github.com/slowteetoe/todo/Godeps/_workspace/src/gopkg.in/mgo.v2"
+	"github.com/slowteetoe/todo/Godeps/_workspace/src/gopkg.in/mgo.v2/bson"
 	"log"
 	"net/http"
 	"os"
