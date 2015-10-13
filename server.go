@@ -49,7 +49,7 @@ func incoming(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var twil twilioRequest
-	log.Printf("Twilio post was: %v", data)
+	log.Printf("Twilio post was: %v", string(data))
 	xml.Unmarshal([]byte(data), &twil)
 
 	message := SmsResponse{XMLName: xml.Name{Local: "Response"}, Message: "Thank you, I got it."}
