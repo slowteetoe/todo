@@ -126,23 +126,23 @@ func todoList(w http.ResponseWriter, r *http.Request) {
 	w.Write(x)
 }
 
-type Server struct {
+type MongoServer struct {
 	dbsession *mgo.Session
 }
 
-func NewMongoServer(connectionString string) (*Server, error) {
+func NewMongoServer(connectionString string) (*MongoServer, error) {
 	dbsession, err := mgo.Dial(connectionString)
 	if err != nil {
 		return nil, err
 	}
-	return &Server{dbsession: dbsession}, nil
+	return &MongoServer{dbsession: dbsession}, nil
 }
 
-func (s *Server) Close() {
+func (s *MongoServer) Close() {
 	s.dbsession.Close()
 }
 
-func (s *Server) WithData(fn http.HandlerFunc) http.HandlerFunc {
+func (s *MongoServer) WithData(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		dbcopy := s.dbsession.Copy()
 		defer dbcopy.Close()
@@ -159,23 +159,23 @@ func main() {
 	}
 	mongoConnectionString := os.Getenv("MONGO_HOST")
 	if mongoConnectionString == "" {
-		mongoConnectionString = "localhost"
+		mongoConnectionString = "mongodb://localhost/todolist"
 		log.Printf("$MONGO_HOST was unset, defaulting to %v", mongoConnectionString)
 	}
-	server, err := NewMongoServer(mongoConnectionString)
+	mongoServer, err := NewMongoServer(mongoConnectionString)
 	if err != nil {
 		panic(err)
 	}
-	defer server.Close()
+	defer mongoServer.Close()
 
 	s := &http.Server{
 		Addr:         ":" + port,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
-	http.HandleFunc("/incoming", server.WithData(incoming))
-	http.HandleFunc("/list", server.WithData(todoList))
-	http.HandleFunc("/create", server.WithData(create))
+	http.HandleFunc("/incoming", mongoServer.WithData(incoming))
+	http.HandleFunc("/list", mongoServer.WithData(todoList))
+	http.HandleFunc("/create", mongoServer.WithData(create))
 
 	log.Fatal(s.ListenAndServe())
 }
