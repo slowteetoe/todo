@@ -5,22 +5,21 @@ import (
 	"testing"
 )
 
-var db *MongoServer
+var mongoServer *MongoServer
 
 func init() {
-	server, err := NewMongoServer("mongodb://localhost/todolist")
-	db = server
+	db, err := NewMongoServer("mongodb://localhost/todolist")
+	mongoServer = db
 	if err != nil {
 		log.Printf("Unable to connect to db %v", err)
 	}
 }
 
 func TestFindingTodoListByPhoneNumber(t *testing.T) {
-	db.dbsession.Copy()
+	db := mongoServer.dbsession.Copy()
 	defer db.Close()
 
-	c := db.dbsession.DB("").C("todolists")
-	todo, err := todoListFor("+17022181502", c)
+	todo, err := todoListFor("+17022181502", db)
 	if err != nil {
 		t.Errorf("Unable to find todolist %v", err)
 	}

@@ -4,7 +4,6 @@ import (
 	"encoding/xml"
 	"github.com/slowteetoe/todo/Godeps/_workspace/src/github.com/gorilla/context"
 	"github.com/slowteetoe/todo/Godeps/_workspace/src/gopkg.in/mgo.v2"
-	"github.com/slowteetoe/todo/Godeps/_workspace/src/gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -15,45 +14,6 @@ import (
 type SmsResponse struct {
 	XMLName xml.Name
 	Message string `xml:"Sms"`
-}
-
-type TodoItem struct {
-	Title       string
-	CompletedAt *time.Time
-}
-
-type TodoList struct {
-	Id                     bson.ObjectId `bson:"_id,omitempty"`
-	Name                   string
-	TodoItems              []TodoItem
-	AssociatedPhoneNumbers []string
-}
-
-func create(w http.ResponseWriter, r *http.Request) {
-	db := context.Get(r, "db").(*mgo.Session)
-	c := db.DB("").C("todolists")
-
-	todoList, err := createBlankTodoList("+17022181502", "Basic Todo", c)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("Created %v", todoList)
-}
-
-func createBlankTodoList(phoneNumber, todoListName string, c *mgo.Collection) (*TodoList, error) {
-	var todoList TodoList
-	todoList = TodoList{
-		Id:                     bson.NewObjectId(),
-		Name:                   todoListName,
-		TodoItems:              []TodoItem{},
-		AssociatedPhoneNumbers: []string{phoneNumber},
-	}
-	err := c.Insert(&todoList)
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
-	return &todoList, nil
 }
 
 // Twilio sends a POST to the specified endpoint
@@ -71,8 +31,7 @@ func incoming(w http.ResponseWriter, r *http.Request) {
 	}
 
 	db := context.Get(r, "db").(*mgo.Session)
-	c := db.DB("").C("todolists")
-	todo, err := todoListFor(from, c)
+	todo, err := todoListFor(from, db)
 
 	if err != nil {
 		log.Printf("Error getting todolist: %v", err)
@@ -80,7 +39,7 @@ func incoming(w http.ResponseWriter, r *http.Request) {
 
 	if todo == nil {
 		log.Printf("Didn't pull up a todo list, creating a new one...")
-		todo, err = createBlankTodoList(from, "Basic Todo", c)
+		todo, err = createBlankTodoList(from, "Basic Todo", db)
 		if err != nil {
 			log.Printf("Creating a new blank todo didn't work right: %v", err)
 		}
@@ -102,20 +61,19 @@ func incoming(w http.ResponseWriter, r *http.Request) {
 	w.Write(x)
 }
 
-func todoListFor(phoneNumber string, c *mgo.Collection) (*TodoList, error) {
-	result := TodoList{}
-	err := c.Find(bson.M{"name": "Basic Todo"}).One(&result)
+func create(w http.ResponseWriter, r *http.Request) {
+	db := context.Get(r, "db").(*mgo.Session)
+
+	todoList, err := createBlankTodoList("+17022181502", "Basic Todo", db)
 	if err != nil {
 		log.Fatal(err)
-		return nil, err
 	}
-	return &result, nil
+	log.Printf("Created %v", todoList)
 }
 
 func todoList(w http.ResponseWriter, r *http.Request) {
 	db := context.Get(r, "db").(*mgo.Session)
-	c := db.DB("").C("todolists")
-	todoList, err := todoListFor("", c)
+	todoList, err := todoListFor("", db)
 	x, err := xml.MarshalIndent(todoList, "", "  ")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -124,22 +82,6 @@ func todoList(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/xml")
 	w.Write(x)
-}
-
-type MongoServer struct {
-	dbsession *mgo.Session
-}
-
-func NewMongoServer(connectionString string) (*MongoServer, error) {
-	dbsession, err := mgo.Dial(connectionString)
-	if err != nil {
-		return nil, err
-	}
-	return &MongoServer{dbsession: dbsession}, nil
-}
-
-func (s *MongoServer) Close() {
-	s.dbsession.Close()
 }
 
 func (s *MongoServer) WithData(fn http.HandlerFunc) http.HandlerFunc {
